@@ -115,7 +115,15 @@ impl Board {
     pub fn moves(&self) -> Vec<Position> {
         // Checkpoint 1. Walk every cell, top to bottom and left to right, and collect
         // the positions of the empty ones. `self.size()` is the number of rows and columns.
-        todo!("Checkpoint 1: moves")
+        let mut result = Vec::new();
+        for row in 0..self.size() {
+            for col in 0..self.size() {
+                if self.cells[row][col] == Cell::Empty {
+                    result.push((row, col));
+                }
+            }
+        }
+        result
     }
 
     /// Put the current player's mark at `position`, and make it the other player's turn.
@@ -128,14 +136,32 @@ impl Board {
         //   2. Put the current player's mark there. `Cell::mark(player)` makes the mark.
         //   3. Remember the move in `self.history`, so `undo` can find it.
         //   4. It is the other player's turn now.
-        todo!("Checkpoint 1: apply_move")
+        let (row, col) = position;
+        if self.cells[row][col] != Cell::Empty {
+            panic!("illegal move: ({row}, {col}) is not empty");
+        }
+        self.cells[row][col] = Cell::mark(self.to_move);
+        self.history.push(position);
+        self.to_move = match self.to_move {
+            Player::X => Player::O,
+            Player::O => Player::X,
+        };
     }
 
     /// Take back the last move. Panics if there is nothing to undo.
     pub fn undo(&mut self) {
         // Checkpoint 1. Everything `apply_move` did, backwards. The last move is at the
         // end of `self.history`. Panic if there isn't one, with the message "nothing to undo".
-        todo!("Checkpoint 1: undo")
+        match self.history.pop() {
+            None => panic!("nothing to undo"),
+            Some((row, col)) => {
+                self.cells[row][col] = Cell::Empty;
+                self.to_move = match self.to_move {
+                    Player::X => Player::O,
+                    Player::O => Player::X,
+                };
+            }
+        }
     }
 
     /// Runs of three X's minus runs of three O's, over every row, column and diagonal.
@@ -150,7 +176,34 @@ impl Board {
         // directions, and skip any direction where the third cell would be off the board.
         // Row and column indexes are `usize`, so be careful with the down-left direction:
         // subtracting from a `usize` that is already 0 panics.
-        todo!("Checkpoint 1: score")
+        let n = self.size() as isize;
+        let directions: [(isize, isize); 4] = [(0, 1), (1, 0), (1, 1), (1, -1)];
+        let mut total = 0;
+        for row in 0..n {
+            for col in 0..n {
+                let first = self.cells[row as usize][col as usize];
+                if first != Cell::X && first != Cell::O {
+                    continue;
+                }
+                for (dr, dc) in directions {
+                    let end_row = row + 2 * dr;
+                    let end_col = col + 2 * dc;
+                    if end_row < 0 || end_row >= n || end_col < 0 || end_col >= n {
+                        continue;
+                    }
+                    let second = self.cells[(row + dr) as usize][(col + dc) as usize];
+                    let third = self.cells[end_row as usize][end_col as usize];
+                    if second == first && third == first {
+                        if first == Cell::X {
+                            total += 1;
+                        } else {
+                            total -= 1;
+                        }
+                    }
+                }
+            }
+        }
+        total
     }
 
     /// Is the game finished? On a 3x3 board, as soon as someone has three in a row.
@@ -158,7 +211,10 @@ impl Board {
     pub fn is_over(&self) -> bool {
         // Checkpoint 1. Two ways for a game to end: there are no moves left, on any board,
         // or someone has three in a row, on a 3x3 board only.
-        todo!("Checkpoint 1: is_over")
+        if self.moves().is_empty() {
+            return true;
+        }
+        self.size() == 3 && self.score() != 0
     }
 
     /// Who is ahead: `Some(X)` if the score is positive, `Some(O)` if negative, `None` if
