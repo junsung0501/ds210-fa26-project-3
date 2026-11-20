@@ -49,7 +49,7 @@ impl Minimax {
 
     /// The best score the player to move can force from `board`, looking `depth` moves
     /// ahead. Scores are from X's point of view: X picks the biggest, O the smallest.
-    fn search(&self, board: &mut Board, depth: usize) -> i32 {
+        fn search(&self, board: &mut Board, depth: usize) -> i32 {
         // Checkpoint 2. The recursive part.
         //   1. If the game is over, the score is `board.score()`. Nothing to search.
         //   2. If `depth` is 0, you have looked as far as you're allowed. Return the
@@ -60,7 +60,30 @@ impl Minimax {
         //      one less depth, and undo it. X keeps the biggest score it sees, O the
         //      smallest. That is the whole algorithm.
         // `board.to_move()` tells you whose turn it is at this point in the search.
-        todo!("Checkpoint 2: search")
+        if board.is_over() {
+            return board.score();
+        }
+        if depth == 0 {
+            return (self.heuristic)(board);
+        }
+
+        let maximizing = board.to_move() == Player::X;
+        let mut best = if maximizing { i32::MIN } else { i32::MAX };
+
+        for position in board.moves() {
+            board.apply_move(position);
+            let score = self.search(board, depth - 1);
+            board.undo();
+
+            if maximizing {
+                if score > best {
+                    best = score;
+                }
+            } else if score < best {
+                best = score;
+            }
+        }
+        best
     }
 }
 
@@ -74,7 +97,22 @@ impl Agent for Minimax {
         // `board` is borrowed, so clone it first to have one you can apply moves to.
         // Applying a move here is the first level of the search, so call `search` with
         // `self.max_depth - 1`. The constructors make sure `max_depth` is at least 1.
-        todo!("Checkpoint 2: choose_move")
+        let mut board = board.clone();
+        let maximizing = board.to_move() == Player::X;
+        let mut best_score = if maximizing { i32::MIN } else { i32::MAX };
+        let mut best_move = board.moves()[0];
+
+        for position in board.moves() {
+            board.apply_move(position);
+            let score = self.search(&mut board, self.max_depth - 1);
+            board.undo();
+
+            if (maximizing && score > best_score) || (!maximizing && score < best_score) {
+                best_score = score;
+                best_move = position;
+            }
+        }
+        best_move
     }
 }
 
